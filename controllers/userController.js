@@ -120,3 +120,21 @@ module.exports.login = (req,res) => {
         })
     })
 }
+
+module.exports.scheduleCleaning = (req,res) => {
+    const userid = req.userData.userid
+
+    User.find({ _id: userid })
+    .exec()
+    .then(user => {
+        return res.status(200).json({
+            message: 'hi'
+        })
+    })
+    .catch(err => {
+        console.log(err);
+        return res.status(500).json({
+            error: err
+        })
+    })
+}
