@@ -6,5 +6,6 @@ const checkAuth = require('../middlewares/checkAuth')
 router.post('/signup', userController.signup)
 router.post('/login', userController.login)
 router.post('/schedule/clean', checkAuth, userController.scheduleCleaning)
+router.patch('/schedule/update', checkAuth, userController.updateCleaningSchedule)
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const mongoose   = require('mongoose');
 const User       = require('../models/user');
+const Schedule   = require('../models/schedule')
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Queue      = require('bull');
@@ -121,14 +122,137 @@ module.exports.login = (req,res) => {
     })
 }
 
+const timeArrayChecker = (time, res) => {
+    
+}
+
 module.exports.scheduleCleaning = (req,res) => {
     const userid = req.userData.userid
+    const date = req.body.date
+    const time = req.body.time
+    const newDate = new Date(date)
 
-    User.find({ _id: userid })
+    if(time.length===0){
+        return res.status(400).json({
+            message: "Time array should not be empty"
+        })
+    }
+
+    if(time.length>2){
+        return res.status(400).json({
+            message: "You can set at max two frequencies for a day"
+        })
+    }
+
+    for (let i = 0; i < time.length; i++) {
+        const element = time[i];
+        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element)
+
+        if(!isValid){
+            return res.status(400).json({
+                message: "Invalid time format. Please provide time(s) in HH:MM format."
+            });
+        }
+    }
+
+    Schedule.find({ user: userid, 'schedules.date': newDate })
     .exec()
-    .then(user => {
+    .then(schedule => {
+
+        if(schedule.length>0) {
+            // schedule for a day already exists
+            
+            return res.status(200).json({
+                message: "Schedule already exists"
+            })
+
+        } else {
+            // schedule for a day doesn't exist
+            
+            const newSchedule = new Schedule({
+                _id: new mongoose.Types.ObjectId,
+                user: userid,
+                schedules: [
+                    {
+                        date: newDate,
+                        timings: time
+                    }
+                ]
+            })
+
+            newSchedule
+            .save()
+            .then(savedSchedule => {
+                return res.status(200).json({
+                    message: "Schedule Added",
+                    schedule: savedSchedule
+                })
+            })
+            .catch(err => {
+                console.log(err);
+                return res.status(500).json({
+                    error: err
+                })
+            })
+        }
+    })
+    .catch(err => {
+        console.log(err);
+        return res.status(500).json({
+            error: err
+        })
+    })
+}
+
+module.exports.updateCleaningSchedule = (req,res) => {
+    const userid = req.userData.userid
+    const date = req.body.date
+    const time = req.body.time
+    const newDate = new Date(date)
+
+    if(time.length===0){
+        return res.status(400).json({
+            message: "Time array should not be empty"
+        })
+    }
+
+    if(time.length>2){
+        return res.status(400).json({
+            message: "You can set at max two frequencies for a day"
+        })
+    }
+
+    for (let i = 0; i < time.length; i++) {
+        const element = time[i];
+        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element)
+
+        if(!isValid){
+            return res.status(400).json({
+                message: "Invalid time format. Please provide time(s) in HH:MM format."
+            });
+        }
+    }
+
+    Schedule.updateOne(
+        { 
+            user: userid, 
+            'schedules.date': newDate 
+        },
+        {
+            $set: {
+                'schedules.$.timings': time
+            }
+        },
+    )
+    .exec()
+    .then(result => {
+        if(result.modifiedCount===0) {
+            return res.status(200).json({
+                message: "Schedule not found"
+            })
+        }
         return res.status(200).json({
-            message: 'hi'
+            message: "Schedule updated successfully"
         })
     })
     .catch(err => {
@@ -137,4 +261,5 @@ module.exports.scheduleCleaning = (req,res) => {
             error: err
         })
     })
+
 }

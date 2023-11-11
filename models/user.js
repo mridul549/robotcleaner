@@ -20,25 +20,6 @@ const userSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
-    schedules: [
-        {
-            date: {
-                type: Date,
-            },
-            frequency: {
-                type: Number,
-                enum: [0, 1, 2], 
-                default: 0,
-            },
-            timings: [
-                {
-                    time: {
-                        type: String, 
-                    }
-                }
-            ]
-        }
-    ]
 }, {
     timestamps: true
 })
