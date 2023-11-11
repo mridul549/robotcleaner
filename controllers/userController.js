@@ -151,14 +151,24 @@ const handleCleaningSchedule = (req, res, isUpdate = false) => {
         }
     }
 
+    if(time.length==2 && time[0]===time[1]){
+        return res.status(400).json({
+            message: "Please provide different timings",
+        });
+    }
+
     const query = { user: userid, 'schedules.date': newDate };
-    const update = isUpdate
-        ? { $set: { 'schedules.$.timings': time } }
-        : {
-              $addToSet: {
-                  schedules: { date: newDate, timings: time },
-              },
-          };
+    const update = isUpdate ? 
+        { 
+            $set: { 
+                'schedules.$.timings': time 
+            } 
+        } : 
+        {
+            $addToSet: {
+                schedules: { date: newDate, timings: time },
+            },
+        };
 
     Schedule.findOneAndUpdate(query, update, { upsert: true, new: true })
         .exec()
@@ -168,9 +178,9 @@ const handleCleaningSchedule = (req, res, isUpdate = false) => {
                     message: "Schedule not found",
                 });
             } else {
-                const successMessage = isUpdate
-                    ? "Schedule updated successfully"
-                    : "Schedule Added";
+                const successMessage = isUpdate ? 
+                    "Schedule updated successfully" : 
+                    "Schedule Added";
                 return res.status(200).json({
                     message: successMessage,
                     schedule: result,
