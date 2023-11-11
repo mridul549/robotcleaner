@@ -122,144 +122,73 @@ module.exports.login = (req,res) => {
     })
 }
 
-const timeArrayChecker = (time, res) => {
-    
-}
+const handleCleaningSchedule = (req, res, isUpdate = false) => {
+    const userid = req.userData.userid;
+    const date = req.body.date;
+    const time = req.body.time;
+    const newDate = new Date(date);
 
-module.exports.scheduleCleaning = (req,res) => {
-    const userid = req.userData.userid
-    const date = req.body.date
-    const time = req.body.time
-    const newDate = new Date(date)
-
-    if(time.length===0){
+    if (time.length === 0) {
         return res.status(400).json({
-            message: "Time array should not be empty"
-        })
+            message: "Time array should not be empty",
+        });
     }
 
-    if(time.length>2){
+    if (time.length > 2) {
         return res.status(400).json({
-            message: "You can set at max two frequencies for a day"
-        })
+            message: "You can set at max two frequencies for a day",
+        });
     }
 
     for (let i = 0; i < time.length; i++) {
         const element = time[i];
-        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element)
+        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element);
 
-        if(!isValid){
+        if (!isValid) {
             return res.status(400).json({
-                message: "Invalid time format. Please provide time(s) in HH:MM format."
+                message: "Invalid time format. Please provide time(s) in HH:MM format.",
             });
         }
     }
 
-    Schedule.find({ user: userid, 'schedules.date': newDate })
-    .exec()
-    .then(schedule => {
+    const query = { user: userid, 'schedules.date': newDate };
+    const update = isUpdate
+        ? { $set: { 'schedules.$.timings': time } }
+        : {
+              $addToSet: {
+                  schedules: { date: newDate, timings: time },
+              },
+          };
 
-        if(schedule.length>0) {
-            // schedule for a day already exists
-            
-            return res.status(200).json({
-                message: "Schedule already exists"
-            })
-
-        } else {
-            // schedule for a day doesn't exist
-            
-            const newSchedule = new Schedule({
-                _id: new mongoose.Types.ObjectId,
-                user: userid,
-                schedules: [
-                    {
-                        date: newDate,
-                        timings: time
-                    }
-                ]
-            })
-
-            newSchedule
-            .save()
-            .then(savedSchedule => {
+    Schedule.findOneAndUpdate(query, update, { upsert: true, new: true })
+        .exec()
+        .then((result) => {
+            if (isUpdate && result.modifiedCount === 0) {
                 return res.status(200).json({
-                    message: "Schedule Added",
-                    schedule: savedSchedule
-                })
-            })
-            .catch(err => {
-                console.log(err);
-                return res.status(500).json({
-                    error: err
-                })
-            })
-        }
-    })
-    .catch(err => {
-        console.log(err);
-        return res.status(500).json({
-            error: err
-        })
-    })
-}
-
-module.exports.updateCleaningSchedule = (req,res) => {
-    const userid = req.userData.userid
-    const date = req.body.date
-    const time = req.body.time
-    const newDate = new Date(date)
-
-    if(time.length===0){
-        return res.status(400).json({
-            message: "Time array should not be empty"
-        })
-    }
-
-    if(time.length>2){
-        return res.status(400).json({
-            message: "You can set at max two frequencies for a day"
-        })
-    }
-
-    for (let i = 0; i < time.length; i++) {
-        const element = time[i];
-        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element)
-
-        if(!isValid){
-            return res.status(400).json({
-                message: "Invalid time format. Please provide time(s) in HH:MM format."
-            });
-        }
-    }
-
-    Schedule.updateOne(
-        { 
-            user: userid, 
-            'schedules.date': newDate 
-        },
-        {
-            $set: {
-                'schedules.$.timings': time
+                    message: "Schedule not found",
+                });
+            } else {
+                const successMessage = isUpdate
+                    ? "Schedule updated successfully"
+                    : "Schedule Added";
+                return res.status(200).json({
+                    message: successMessage,
+                    schedule: result,
+                });
             }
-        },
-    )
-    .exec()
-    .then(result => {
-        if(result.modifiedCount===0) {
-            return res.status(200).json({
-                message: "Schedule not found"
-            })
-        }
-        return res.status(200).json({
-            message: "Schedule updated successfully"
         })
-    })
-    .catch(err => {
-        console.log(err);
-        return res.status(500).json({
-            error: err
-        })
-    })
+        .catch((err) => {
+            console.log(err);
+            return res.status(500).json({
+                error: err,
+            });
+        });
+};
 
-}
+module.exports.scheduleCleaning = (req, res) => {
+    handleCleaningSchedule(req, res, false);
+};
+
+module.exports.updateCleaningSchedule = (req, res) => {
+    handleCleaningSchedule(req, res, true);
+};
