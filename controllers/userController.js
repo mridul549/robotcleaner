@@ -192,64 +192,75 @@ module.exports.scheduleCleaning = (req,res) => {
     })
 }
 
+const cancelJobById = async (jobId) => {
+    try {
+        const job = await agenda.jobs({ _id: new mongoose.Types.ObjectId(jobId) });
+    
+        if (job.length > 0) {
+            await job[0].remove();
+        } 
+    } catch (error) {
+        console.error(`Error cancelling job: ${error}`);
+    }
+};
+
 module.exports.updateCleaningSchedule = async (req,res) => {
     const userid = req.userData.userid
     const date = req.body.date
     const time = req.body.time
     const newDate = new Date(date)
 
-    Schedule.updateOne(
-        { 
-            user: userid, 
-            'schedules.date': newDate 
-        },
-        {
-            $set: {
-                'schedules.$.timings': time
-            }
-        },
-    )
+    let timeArray = []
+
+    for (let i = 0; i < time.length; i++) {
+        const element = time[i];
+
+        const executionDate = new Date(`${date}T${element}`)
+        const jobData = {
+            userid: userid,
+            date: newDate,
+            time: element
+        }
+
+        const job = await agenda.schedule(executionDate, 'CleaningJob', jobData);
+        timeArray.push({
+            time: element,
+            cronid: job.attrs._id
+        })
+    }
+
+    Schedule.find({ user: userid, 'schedules.date': newDate })
     .exec()
-    .then(result => {
-        if(result.modifiedCount===0) {
-            return res.status(200).json({
+    .then(async result => {
+        const timingsArray = result[0].schedules[0].timings
+
+        const updation = await Schedule.updateOne(
+            { 
+                user: userid, 
+                'schedules.date': newDate 
+            },
+            {
+                $set: {
+                    'schedules.$.timings': timeArray
+                }
+            },
+        )
+        .exec()
+        if(updation.modifiedCount===0) {
+            res.status(404).json({
                 message: "Schedule not found"
             })
         }
-        return res.status(200).json({
+        res.status(200).json({
             message: "Schedule updated successfully"
         })
-    })
-    .catch(err => {
-        console.log(err);
-        return res.status(500).json({
-            error: err
-        })
-    })
-}
 
-module.exports.deleteSchedule = (req,res) => {
-    const userid = req.userData.userid
-    const date = req.body.date
-    const newDate = new Date(date)
-
-    Schedule.updateOne({ user: userid }, {
-        $pull: {
-            schedules: {
-                date: newDate
-            }
+        for (let i = 0; i < timingsArray.length; i++) {
+            const element = timingsArray[i];
+            const cronid = element.cronid
+    
+            await cancelJobById(cronid)
         }
-    })
-    .exec()
-    .then(result => {
-        if(result.modifiedCount===0){
-            return res.status(404).json({
-                message: "Date not found in the schedule"
-            })
-        }
-        return res.status(200).json({
-            message: "Deleted Successfully"
-        })
     })
     .catch(err => {
         console.log(err);
