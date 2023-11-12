@@ -122,38 +122,11 @@ module.exports.login = (req,res) => {
     })
 }
 
-const timeArrayChecker = (time, res) => {
-    
-}
-
 module.exports.scheduleCleaning = (req,res) => {
     const userid = req.userData.userid
     const date = req.body.date
     const time = req.body.time
     const newDate = new Date(date)
-
-    if(time.length===0){
-        return res.status(400).json({
-            message: "Time array should not be empty"
-        })
-    }
-
-    if(time.length>2){
-        return res.status(400).json({
-            message: "You can set at max two frequencies for a day"
-        })
-    }
-
-    for (let i = 0; i < time.length; i++) {
-        const element = time[i];
-        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element)
-
-        if(!isValid){
-            return res.status(400).json({
-                message: "Invalid time format. Please provide time(s) in HH:MM format."
-            });
-        }
-    }
 
     Schedule.find({ user: userid, 'schedules.date': newDate })
     .exec()
@@ -161,31 +134,23 @@ module.exports.scheduleCleaning = (req,res) => {
 
         if(schedule.length>0) {
             // schedule for a day already exists
-            
             return res.status(200).json({
                 message: "Schedule already exists"
             })
-
         } else {
             // schedule for a day doesn't exist
-            
-            const newSchedule = new Schedule({
-                _id: new mongoose.Types.ObjectId,
-                user: userid,
-                schedules: [
-                    {
+            Schedule.findOneAndUpdate({ user: userid }, {
+                $push: {
+                    schedules: {
                         date: newDate,
                         timings: time
                     }
-                ]
-            })
-
-            newSchedule
-            .save()
-            .then(savedSchedule => {
+                }
+            }, { upsert: true })
+            .exec()
+            .then(result => {
                 return res.status(200).json({
-                    message: "Schedule Added",
-                    schedule: savedSchedule
+                    message: "Schedule Added Successfully",
                 })
             })
             .catch(err => {
@@ -209,29 +174,6 @@ module.exports.updateCleaningSchedule = (req,res) => {
     const date = req.body.date
     const time = req.body.time
     const newDate = new Date(date)
-
-    if(time.length===0){
-        return res.status(400).json({
-            message: "Time array should not be empty"
-        })
-    }
-
-    if(time.length>2){
-        return res.status(400).json({
-            message: "You can set at max two frequencies for a day"
-        })
-    }
-
-    for (let i = 0; i < time.length; i++) {
-        const element = time[i];
-        const isValid = /^([01]\d|2[0-3]):([0-5]\d)$/.test(element)
-
-        if(!isValid){
-            return res.status(400).json({
-                message: "Invalid time format. Please provide time(s) in HH:MM format."
-            });
-        }
-    }
 
     Schedule.updateOne(
         { 
@@ -261,5 +203,35 @@ module.exports.updateCleaningSchedule = (req,res) => {
             error: err
         })
     })
+}
 
+module.exports.deleteSchedule = (req,res) => {
+    const userid = req.userData.userid
+    const date = req.body.date
+    const newDate = new Date(date)
+
+    Schedule.updateOne({ user: userid }, {
+        $pull: {
+            schedules: {
+                date: newDate
+            }
+        }
+    })
+    .exec()
+    .then(result => {
+        if(result.modifiedCount===0){
+            return res.status(404).json({
+                message: "Date not found in the schedule"
+            })
+        }
+        return res.status(200).json({
+            message: "Deleted Successfully"
+        })
+    })
+    .catch(err => {
+        console.log(err);
+        return res.status(500).json({
+            error: err
+        })
+    })
 }
