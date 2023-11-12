@@ -8,17 +8,7 @@ const Agenda = require('agenda')
 const agenda = new Agenda({ 
     db: { address: process.env.MONGOOSE_CONNECTION_STRING } 
 });
-
-// agenda.on("ready", async () => {
-//     console.log("Connected to Agenda");
-
-//     agenda.define('CleaningJob', async (job) => {
-//         const userId = job.attrs.data.userId;
-//         console.log("scheduled cleaning");
-//     });
-
-//     await agenda.start();
-// })
+const AgendaModel = mongoose.connection.collection('agendaJobs')
 
 const mailQueue = new Queue('mailQueue', {
     redis: {
@@ -161,7 +151,9 @@ module.exports.scheduleCleaning = (req,res) => {
 
                 const executionDate = new Date(`${date}T${element}`)
                 const jobData = {
-                    userid: userid
+                    userid: userid,
+                    date: newDate,
+                    time: element
                 }
                 const job = await agenda.schedule(executionDate, 'CleaningJob', jobData);
                 timeArray.push({
@@ -200,7 +192,7 @@ module.exports.scheduleCleaning = (req,res) => {
     })
 }
 
-module.exports.updateCleaningSchedule = (req,res) => {
+module.exports.updateCleaningSchedule = async (req,res) => {
     const userid = req.userData.userid
     const date = req.body.date
     const time = req.body.time

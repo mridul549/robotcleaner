@@ -2,7 +2,7 @@ const fb = require('../config/firebase')
 const Notification = require('../models/notification')
 const { getMessaging } = require('firebase-admin/messaging')
 
-const sendNotification = async (userid, date, time) => {
+module.exports.sendNotification = async (userid, date, time) => {
     Notification.find({ user: userid })
     .exec()
     .then(result => {
@@ -12,7 +12,7 @@ const sendNotification = async (userid, date, time) => {
             const message = {
                 notification: {
                     title: "Robot cleaning commencing...",
-                    body: `Scheduled cleaning on ${date} at ${time}`
+                    body: `Scheduled cleaning on ${date} at ${time} has started`
                 },
                 token: fcm_token
             }
@@ -28,9 +28,6 @@ const sendNotification = async (userid, date, time) => {
         } 
     })
     .catch(err => {
-        console.log(err);
-        return res.status(500).json({
-            error: err
-        })
+        console.log("Notification not sent!");
     })
 }
