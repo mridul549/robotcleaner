@@ -8,7 +8,6 @@ const Agenda = require('agenda')
 const agenda = new Agenda({ 
     db: { address: process.env.MONGOOSE_CONNECTION_STRING } 
 });
-const AgendaModel = mongoose.connection.collection('agendaJobs')
 
 const mailQueue = new Queue('mailQueue', {
     redis: {

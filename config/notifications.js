@@ -16,9 +16,9 @@ agenda.on("ready", async () => {
         const date = job.attrs.data.date
         const time = job.attrs.data.time
         
+        // 1. Send notification
         try {
-            // 1. Send notification
-            // await notificationController.sendNotification(userid, date, time)
+            await notificationController.sendNotification(userid, date, time)
         } catch (error) {
             console.log("Error while sending notification");
         }
