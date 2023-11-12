@@ -4,6 +4,21 @@ const Schedule   = require('../models/schedule')
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Queue      = require('bull');
+const Agenda = require('agenda')
+const agenda = new Agenda({ 
+    db: { address: process.env.MONGOOSE_CONNECTION_STRING } 
+});
+
+// agenda.on("ready", async () => {
+//     console.log("Connected to Agenda");
+
+//     agenda.define('CleaningJob', async (job) => {
+//         const userId = job.attrs.data.userId;
+//         console.log("scheduled cleaning");
+//     });
+
+//     await agenda.start();
+// })
 
 const mailQueue = new Queue('mailQueue', {
     redis: {
@@ -130,7 +145,7 @@ module.exports.scheduleCleaning = (req,res) => {
 
     Schedule.find({ user: userid, 'schedules.date': newDate })
     .exec()
-    .then(schedule => {
+    .then(async schedule => {
 
         if(schedule.length>0) {
             // schedule for a day already exists
@@ -139,16 +154,32 @@ module.exports.scheduleCleaning = (req,res) => {
             })
         } else {
             // schedule for a day doesn't exist
+            let timeArray = []
+
+            for (let i = 0; i < time.length; i++) {
+                const element = time[i];
+
+                const executionDate = new Date(`${date}T${element}`)
+                const jobData = {
+                    userid: userid
+                }
+                const job = await agenda.schedule(executionDate, 'CleaningJob', jobData);
+                timeArray.push({
+                    time: element,
+                    cronid: job.attrs._id
+                })
+            }
+
             Schedule.findOneAndUpdate({ user: userid }, {
                 $push: {
                     schedules: {
                         date: newDate,
-                        timings: time
+                        timings: timeArray
                     }
                 }
             }, { upsert: true })
             .exec()
-            .then(result => {
+            .then(async result => {
                 return res.status(200).json({
                     message: "Schedule Added Successfully",
                 })

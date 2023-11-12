@@ -18,6 +18,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 
 // Require bull queue processor for orders
 require('./queue/index')
+require('./config/notifications')
 
 // implementing CORS security mechanism
 app.use((req,res,next) => {

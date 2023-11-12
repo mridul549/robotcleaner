@@ -1,4 +1,3 @@
-const path = require('path')
 const fb = require('../config/firebase')
 const Notification = require('../models/notification')
 const { getMessaging } = require('firebase-admin/messaging')
@@ -12,7 +11,7 @@ const sendNotification = async (userid, date, time) => {
 
             const message = {
                 notification: {
-                    title: "Robot cleaning commencing",
+                    title: "Robot cleaning commencing...",
                     body: `Scheduled cleaning on ${date} at ${time}`
                 },
                 token: fcm_token
@@ -35,4 +34,3 @@ const sendNotification = async (userid, date, time) => {
         })
     })
 }
-

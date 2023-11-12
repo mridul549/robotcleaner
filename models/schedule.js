@@ -13,7 +13,13 @@ const scheduleSchema = mongoose.Schema({
             },
             timings: [ 
                 { 
-                    type: String 
+                    time: {
+                        type: String 
+                    },
+                    cronid: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'agendaJobs'
+                    }
                 } 
             ]
         }
