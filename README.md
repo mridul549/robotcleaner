@@ -51,6 +51,10 @@ The system includes a user authentication mechanism, allowing operators to log i
     - User tries to set the frequency greater than 2 for a day.
     - No date or time from the past can be scheduled. (Eg. If today is 13th Nov, 2023 02:30 PM, then you can't schedule a task for 12th Nov, 2023 or a time before 02:30 PM).
 
+### Documentation:
+- Postman Collection: https://warped-shuttle-621293.postman.co/workspace/Team-Workspace~377b815e-3199-4e51-897f-afc0155f55b1/collection/21883208-11a90c12-e362-4459-8880-c36d3f921dbf?action=share&creator=21883208
+- Postman Published Documentation: https://documenter.getpostman.com/view/21883208/2s9YXk4gqu
+
 # FAQ
 
 **Q. Why have I used Redis?** \
