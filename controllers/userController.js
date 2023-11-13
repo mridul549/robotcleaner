@@ -141,7 +141,7 @@ module.exports.scheduleCleaning = (req,res) => {
 
         if(schedule.length>0) {
             // schedule for a day already exists
-            return res.status(200).json({
+            return res.status(400).json({
                 message: "Schedule already exists"
             })
         } else {
@@ -174,7 +174,7 @@ module.exports.scheduleCleaning = (req,res) => {
             }, { upsert: true })
             .exec()
             .then(async result => {
-                return res.status(200).json({
+                return res.status(201).json({
                     message: "Schedule Added Successfully",
                 })
             })
@@ -260,7 +260,7 @@ module.exports.scheduleCleanings = async (req,res) => {
     })
     .exec()
     .then(result => {
-        return res.status(200).json({
+        return res.status(201).json({
             result: "Schedules added successfully"
         })
     })
