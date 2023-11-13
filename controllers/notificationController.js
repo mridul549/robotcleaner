@@ -12,7 +12,7 @@ module.exports.sendNotification = async (userid, date, time) => {
 
             const message = {
                 notification: {
-                    title: "Robot cleaning commencing...",
+                    title: "Robot 🤖 cleaning commencing...",
                     body: `Scheduled cleaning on ${date.toDateString()} at ${time} has started`
                 },
                 token: fcm_token
