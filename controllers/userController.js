@@ -4,7 +4,10 @@ const Schedule   = require('../models/schedule')
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
 const Queue      = require('bull');
-const Agenda = require('agenda')
+const Agenda     = require('agenda')
+const checkDate = require('../errors/checkDate')
+const checkTime = require('../errors/checkTime')
+
 const agenda = new Agenda({ 
     db: { address: process.env.MONGOOSE_CONNECTION_STRING } 
 });
@@ -189,6 +192,85 @@ module.exports.scheduleCleaning = (req,res) => {
             error: err
         })
     })
+}
+
+module.exports.scheduleCleanings = async (req,res) => {
+    const userid = req.userData.userid
+    const scheduleArray = req.body.schedule
+    let newScheduleArray = []
+
+    // Check the entire schedule array for Invalid preferences
+    for (let i = 0; i < scheduleArray.length; i++) {
+        const element = scheduleArray[i];
+
+        // date error checks
+        const dateErrorCheck = checkDate(element.date)
+        if(dateErrorCheck!=null){
+            return res.status(400).json({
+                message: dateErrorCheck
+            })
+        }
+
+        // time error checks
+        const timeErrorCheck = checkTime(element.date, element.time)
+
+        if(timeErrorCheck!=null){
+            return res.status(400).json({
+                message: timeErrorCheck
+            })
+        }
+
+    }
+
+    // Schedule the jobs and build the final array
+    for (let i = 0; i < scheduleArray.length; i++) {
+        const element = scheduleArray[i];
+
+        let newTimeArray = []
+        for (let j = 0; j < element.time.length; j++) {
+            const timeElement = element.time[j];
+
+            const newDate = new Date(element.date)
+            const executionDate = new Date(`${element.date}T${timeElement}`)
+            const jobData = {
+                userid: userid,
+                date: newDate,
+                time: timeElement
+            }
+            const job = await agenda.schedule(executionDate, 'CleaningJob', jobData);
+
+            newTimeArray.push({
+                time: timeElement,
+                cronid: job.attrs._id
+            })
+        }
+
+        newScheduleArray.push({
+            date: element.date,
+            timings: newTimeArray
+        })
+    }
+
+    Schedule.updateOne({ user: userid }, {
+        $push: {
+            schedules: {
+                $each: newScheduleArray,
+            },
+        }
+    })
+    .exec()
+    .then(result => {
+        return res.status(200).json({
+            result: "Schedules added successfully"
+        })
+    })
+    .catch(err => {
+        console.log(err);
+        return res.status(500).json({
+            error: err
+        })
+    })
+
 }
 
 const cancelJobById = async (jobId) => {
